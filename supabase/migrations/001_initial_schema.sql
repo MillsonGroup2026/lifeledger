@@ -1,5 +1,21 @@
--- LifeLedger Initial Schema
--- Run this in your Supabase project SQL editor
+-- LifeLedger Initial Schema (idempotent — safe to re-run)
+
+-- Drop existing policies first
+drop policy if exists "household_select" on households;
+drop policy if exists "members_select" on household_members;
+drop policy if exists "profiles_select" on user_profiles;
+drop policy if exists "profiles_insert" on user_profiles;
+drop policy if exists "profiles_update" on user_profiles;
+drop policy if exists "accounts_all" on accounts;
+drop policy if exists "transactions_all" on transactions;
+drop policy if exists "balance_snapshots_all" on balance_snapshots;
+drop policy if exists "budgets_all" on budgets;
+drop policy if exists "goals_all" on goals;
+drop policy if exists "policies_all" on policies;
+drop policy if exists "recurring_all" on recurring_transactions;
+drop policy if exists "income_all" on income_items;
+drop policy if exists "fixed_expenses_all" on fixed_expenses;
+drop policy if exists "market_read" on market_snapshots;
 
 -- Enable RLS
 alter default privileges in schema public grant all on tables to postgres, anon, authenticated, service_role;
@@ -86,7 +102,7 @@ create table if not exists transactions (
   created_at timestamptz default now()
 );
 alter table transactions enable row level security;
-create index idx_transactions_account_date on transactions(account_id, date desc);
+create index if not exists idx_transactions_account_date on transactions(account_id, date desc);
 
 -- BALANCE SNAPSHOTS
 create table if not exists balance_snapshots (

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
-import { createClient } from '@supabase/supabase-js'
+import { createClient as createAdminClient } from '@supabase/supabase-js'
 import { cookies } from 'next/headers'
 import type { Database } from '@/lib/supabase/types'
 
@@ -32,8 +32,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: authError?.message ?? 'Signup failed' }, { status: 400 })
   }
 
-  // Use service role to create household (bypasses RLS)
-  const admin = createClient<Database>(
+  // Use service role to create household (bypasses RLS) — no generic, admin client
+  const admin = createAdminClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!
   )
