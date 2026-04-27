@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { ChevronRight, ChevronLeft } from 'lucide-react'
+import { createClient } from '@/lib/supabase/client'
 
 const STEPS = [
   { id: 1, title: 'Personal Basics', desc: 'Tell us about yourself' },
@@ -12,6 +13,7 @@ const STEPS = [
 
 export default function OnboardingPage() {
   const [step, setStep] = useState(1)
+  const [saving, setSaving] = useState(false)
   const [form, setForm] = useState({
     age: '', location: '', marital_status: 'married', dependents: '0', employment_type: 'both',
     financial_literacy: 'intermediate', income_range: '150k-200k', primary_income_source: 'salary', debt_types: [] as string[], credit_score_range: '740-799',
@@ -23,6 +25,46 @@ export default function OnboardingPage() {
     setForm(prev => ({ ...prev, [key]: value }))
 
   const progress = ((step - 1) / (STEPS.length - 1)) * 100
+
+  const handleFinish = async () => {
+    setSaving(true)
+    const supabase = createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) { window.location.href = '/auth/login'; return }
+
+    const { data: member } = await supabase
+      .from('household_members')
+      .select('household_id')
+      .eq('user_id', user.id)
+      .single()
+
+    if (member) {
+      await supabase.from('user_profiles').upsert({
+        user_id: user.id,
+        household_id: member.household_id,
+        age: form.age ? parseInt(form.age) : null,
+        location: form.location || null,
+        marital_status: form.marital_status,
+        dependents: parseInt(form.dependents) || 0,
+        employment_type: form.employment_type,
+        financial_literacy: form.financial_literacy,
+        income_range: form.income_range,
+        primary_income_source: form.primary_income_source,
+        debt_types: form.debt_types,
+        credit_score_range: form.credit_score_range,
+        general_health: form.general_health,
+        is_smoker: form.is_smoker,
+        has_employer_insurance: form.has_employer_insurance,
+        health_risk_tolerance: form.health_risk_tolerance,
+        primary_financial_goal: form.primary_financial_goal,
+        investment_risk_appetite: form.investment_risk_appetite,
+        time_horizon_years: parseInt(form.time_horizon_years) || 10,
+        updated_at: new Date().toISOString(),
+      }, { onConflict: 'user_id' })
+    }
+
+    window.location.href = '/dashboard'
+  }
 
   return (
     <div className="min-h-full flex items-center justify-center bg-gray-950 px-4 py-12">
@@ -53,7 +95,6 @@ export default function OnboardingPage() {
           <h2 className="text-lg font-semibold text-gray-100 mb-1">{STEPS[step - 1].title}</h2>
           <p className="text-sm text-gray-500 mb-6">{STEPS[step - 1].desc}</p>
 
-          {/* Step 1: Personal */}
           {step === 1 && (
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
@@ -100,7 +141,6 @@ export default function OnboardingPage() {
             </div>
           )}
 
-          {/* Step 2: Financial */}
           {step === 2 && (
             <div className="space-y-4">
               <div>
@@ -156,7 +196,6 @@ export default function OnboardingPage() {
             </div>
           )}
 
-          {/* Step 3: Health */}
           {step === 3 && (
             <div className="space-y-4">
               <div>
@@ -191,7 +230,6 @@ export default function OnboardingPage() {
             </div>
           )}
 
-          {/* Step 4: Goals */}
           {step === 4 && (
             <div className="space-y-4">
               <div>
@@ -241,7 +279,6 @@ export default function OnboardingPage() {
             </div>
           )}
 
-          {/* Navigation */}
           <div className="flex items-center justify-between mt-8 pt-6 border-t border-gray-800">
             {step > 1 ? (
               <button onClick={() => setStep(s => s - 1)}
@@ -252,11 +289,12 @@ export default function OnboardingPage() {
             <button
               onClick={() => {
                 if (step < STEPS.length) setStep(s => s + 1)
-                else window.location.href = '/dashboard'
+                else handleFinish()
               }}
-              className="flex items-center gap-2 px-6 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-black text-sm font-semibold rounded-lg transition-colors"
+              disabled={saving}
+              className="flex items-center gap-2 px-6 py-2.5 bg-emerald-500 hover:bg-emerald-400 disabled:opacity-50 text-black text-sm font-semibold rounded-lg transition-colors"
             >
-              {step < STEPS.length ? 'Continue' : 'Go to Dashboard'}
+              {step < STEPS.length ? 'Continue' : saving ? 'Saving...' : 'Go to Dashboard'}
               <ChevronRight className="w-4 h-4" />
             </button>
           </div>

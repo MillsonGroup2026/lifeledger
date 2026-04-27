@@ -9,12 +9,27 @@ export default function SignupPage() {
   const [password, setPassword] = useState('')
   const [householdName, setHouseholdName] = useState('')
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
-    // TODO: Supabase auth + household creation
-    setTimeout(() => { window.location.href = '/onboarding'; }, 500)
+    setError('')
+
+    const res = await fetch('/api/auth/signup', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, email, password, householdName }),
+    })
+
+    const data = await res.json()
+    if (!res.ok) {
+      setError(data.error ?? 'Signup failed')
+      setLoading(false)
+      return
+    }
+
+    window.location.href = '/onboarding'
   }
 
   return (
@@ -25,6 +40,11 @@ export default function SignupPage() {
           <p className="text-gray-500 text-sm mt-2">Create your account</p>
         </div>
         <form onSubmit={handleSignup} className="space-y-4 bg-gray-900 border border-gray-800 rounded-2xl p-8">
+          {error && (
+            <div className="bg-red-500/10 border border-red-500/30 text-red-400 text-sm px-3 py-2 rounded-lg">
+              {error}
+            </div>
+          )}
           <div>
             <label className="text-xs text-gray-500 block mb-1.5 font-medium">Your Name</label>
             <input type="text" required value={name} onChange={e => setName(e.target.value)}

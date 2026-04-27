@@ -2,17 +2,29 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import { createClient } from '@/lib/supabase/client'
 
 export default function LoginPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
-    // TODO: Supabase auth
-    setTimeout(() => { window.location.href = '/dashboard'; }, 500)
+    setError('')
+
+    const supabase = createClient()
+    const { error: authError } = await supabase.auth.signInWithPassword({ email, password })
+
+    if (authError) {
+      setError(authError.message)
+      setLoading(false)
+      return
+    }
+
+    window.location.href = '/dashboard'
   }
 
   return (
@@ -23,6 +35,11 @@ export default function LoginPage() {
           <p className="text-gray-500 text-sm mt-2">Sign in to your account</p>
         </div>
         <form onSubmit={handleLogin} className="space-y-4 bg-gray-900 border border-gray-800 rounded-2xl p-8">
+          {error && (
+            <div className="bg-red-500/10 border border-red-500/30 text-red-400 text-sm px-3 py-2 rounded-lg">
+              {error}
+            </div>
+          )}
           <div>
             <label className="text-xs text-gray-500 block mb-1.5 font-medium">Email</label>
             <input
